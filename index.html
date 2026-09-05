@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Tanks Blitz</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <!-- ===== ЭКРАН ЗАГРУЗКИ ===== -->
+    <div id="loadingScreen">
+        <div id="loadingBg">
+            <img src="anime-girl-tank.jpg" alt="Anime" class="bg-image" id="loadingImg">
+            <div class="loading-overlay">
+                <div class="loading-container">
+                    <div class="loading-logo">🎮</div>
+                    <div class="loading-title">TANKS BLITZ</div>
+                    <div class="loading-subtitle" id="loadingSubtitle">Синхронизация данных...</div>
+                    <div class="loading-bar">
+                        <div class="loading-progress" id="loadingProgress"></div>
+                    </div>
+                    <div class="loading-version">26.8.0</div>
+                    <div class="loading-tanks" id="loadingTanks">Загрузка танков...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ЭКРАН ВХОДА ===== -->
+    <div id="loginScreen" style="display:none;">
+        <div id="loginBg">
+            <img src="anime-girl-tank.jpg" alt="Anime" class="bg-image" id="loginImg">
+            <div class="login-overlay">
+                <div class="login-container">
+                    <div class="login-header">
+                        <div class="login-logo">🎮</div>
+                        <div class="login-title">TANKS BLITZ</div>
+                        <div class="login-subtitle">ВОЙДИ В ИГРУ</div>
+                    </div>
+                    <div id="loginError" class="error-message" style="display:none;"></div>
+                    <div class="login-divider">ИЛИ</div>
+                    <div class="login-form">
+                        <div class="input-group">
+                            <label>Электронная почта</label>
+                            <input type="email" id="loginEmail" placeholder="example@mail.com">
+                        </div>
+                        <div class="input-group">
+                            <label>Пароль</label>
+                            <input type="password" id="loginPassword" placeholder="••••••••">
+                        </div>
+                        <button class="btn-login" id="loginBtn">ВОЙТИ</button>
+                    </div>
+                    <div class="login-links">
+                        <a href="#" class="forgot-password" id="forgotBtn">НЕ МОГУ ВОЙТИ</a>
+                        <a href="#" class="register-link" id="registerBtn">СОЗДАТЬ АККАУНТ</a>
+                    </div>
+                    <div class="login-footer">
+                        <span class="version">26.8.0</span>
+                        <span class="last-login" id="lastLoginDisplay">Последний вход: —</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ЭКРАН РЕГИСТРАЦИИ ===== -->
+    <div id="registerScreen" style="display:none;">
+        <div id="registerBg">
+            <img src="anime-girl-tank.jpg" alt="Anime" class="bg-image" id="registerImg">
+            <div class="login-overlay">
+                <div class="login-container register-container">
+                    <div class="login-header">
+                        <div class="login-logo">🎮</div>
+                        <div class="login-title">TANKS BLITZ</div>
+                        <div class="login-subtitle">СОЗДАНИЕ АККАУНТА</div>
+                    </div>
+                    <div id="registerError" class="error-message" style="display:none;"></div>
+                    <div class="login-form">
+                        <div class="input-group">
+                            <label>Игровой ник</label>
+                            <input type="text" id="registerName" placeholder="Введите ваш ник">
+                        </div>
+                        <div class="input-group">
+                            <label>Электронная почта</label>
+                            <input type="email" id="registerEmail" placeholder="example@mail.com">
+                        </div>
+                        <div class="input-group">
+                            <label>Пароль</label>
+                            <input type="password" id="registerPassword" placeholder="Минимум 6 символов">
+                        </div>
+                        <div class="input-group">
+                            <label>Подтверждение пароля</label>
+                            <input type="password" id="registerPasswordConfirm" placeholder="Повторите пароль">
+                        </div>
+                        <button class="btn-login" id="registerBtn2">СОЗДАТЬ АККАУНТ</button>
+                        <button class="btn-back" id="backToLoginBtn">◀ НАЗАД К ВХОДУ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ИГРОВОЙ ИНТЕРФЕЙС ===== -->
+    <div id="gameInterface" style="display:none;">
+        <div id="game-container"></div>
+        <div id="ui-layer">
+            <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+            <div class="top-bar">
+                <div class="player-info" id="statsToggleBtn">
+                    <div class="avatar">⚡</div>
+                    <div class="player-text">
+                        <span class="p-name" id="gamePlayerName">Игрок</span>
+                        <span class="p-clan">[LYPSO]</span>
+                    </div>
+                </div>
+                <div class="res-bar">
+                    <span>🪙 142</span>
+                    <span>⚙️ 7 316 844</span>
+                    <span>⭐ 86 318</span>
+                    <button id="musicToggleBtnTop" class="music-btn-top">🔊</button>
+                </div>
+            </div>
+
+            <!-- КНОПКА В БОЙ -->
+            <div class="battle-section">
+                <button class="btn-battle" id="battleBtn">В БОЙ!</button>
+                <div class="battle-sub">Новый бой • Сменить режим</div>
+            </div>
+
+            <!-- ЛЕВАЯ ПАНЕЛЬ -->
+            <div class="left-panel">
+                <button class="left-btn" id="storageBtn" data-page="storage">📦 Хранилище</button>
+                <button class="left-btn" id="chatMenuBtn" data-page="chat">💬 Чат <span class="b-red" id="chatBadge">27</span></button>
+                <button class="left-btn" id="settingsMenuBtn" data-page="settings">⚙️ Настройки</button>
+                <button class="left-btn" id="newsBtn" data-page="news">📰 Новости</button>
+            </div>
+
+            <!-- ПРАВАЯ ПАНЕЛЬ -->
+            <div class="right-panel">
+                <div class="promo-box">
+                    <div class="p-title">Розыгрыш «Раскаленный...»</div>
+                    <div class="p-time">⏱️ 6д 9ч</div>
+                </div>
+                <button class="ad-btn">▶ Золото за рекламу</button>
+            </div>
+
+            <!-- FPS ВНИЗУ СЛЕВА -->
+            <div class="fps-bottom-left" id="fpsDisplay">
+                <span class="fps-value" id="fpsValue">0</span>
+                <span class="fps-label">FPS</span>
+            </div>
+
+            <!-- КАРУСЕЛЬ ТАНКОВ -->
+            <div class="carousel">
+                <div class="t-card active">
+                    <span class="t-lvl">X</span>
+                    <div class="t-icon">🟫</div>
+                    <div class="t-name">Minotauro</div>
+                </div>
+                <div class="t-card">
+                    <span class="t-lvl">X</span>
+                    <div class="t-icon">🔶</div>
+                    <div class="t-name">FV205b</div>
+                </div>
+                <div class="t-card">
+                    <span class="t-lvl">X</span>
+                    <div class="t-icon">🔷</div>
+                    <div class="t-name">Ho-Ri</div>
+                </div>
+                <div class="t-card">
+                    <span class="t-lvl">X</span>
+                    <div class="t-icon">🟨</div>
+                    <div class="t-name">Wz.70</div>
+                </div>
+            </div>
+
+            <!-- ===== СТАТИСТИКА (ПОЛНЫЙ ЭКРАН) ===== -->
+            <div class="stats-fullscreen" id="statsFullscreen">
+                <div class="stats-fullscreen-content">
+                    <div class="stats-fullscreen-header">
+                        <button class="stats-back-btn" id="statsBackBtn">← Назад</button>
+                        <span class="stats-fullscreen-title">Статистика</span>
+                    </div>
+                    <div class="stats-fullscreen-body" id="statsFullscreenBody">
+                        <div class="stats-profile">
+                            <div class="stats-profile-avatar">🏆</div>
+                            <div class="stats-profile-info">
+                                <span class="stats-profile-name" id="statsFullName">
+                                    Игрок
+                                    <button class="edit-name-btn" id="editNameBtn">✏️</button>
+                                </span>
+                                <span class="stats-profile-clan" id="statsFullClan">[LYPSO] Calypso clan</span>
+                                <span class="stats-profile-league">🔵 Золотая лига</span>
+                            </div>
+                        </div>
+                        <div class="stats-full-grid">
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullBattles">0</span>
+                                <span class="stats-full-label">Бои</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullWins">0</span>
+                                <span class="stats-full-label">Победы</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullWinrate">0%</span>
+                                <span class="stats-full-label">Винрейт</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullAvgDamage">0</span>
+                                <span class="stats-full-label">Средний урон</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullMastery">0</span>
+                                <span class="stats-full-label">«Мастер»</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullRating">0</span>
+                                <span class="stats-full-label">Рейтинг</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullDestroyed">0</span>
+                                <span class="stats-full-label">Уничтожено</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullSurvival">0%</span>
+                                <span class="stats-full-label">Выживаемость</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullAccuracy">0%</span>
+                                <span class="stats-full-label">Точность</span>
+                            </div>
+                        </div>
+                        <div class="stats-tournaments">
+                            <div class="tournaments-title">📊 История турниров</div>
+                            <div class="tournaments-grid">
+                                <div class="tournament-item">
+                                    <span class="tournament-name">Золотая лига</span>
+                                    <span class="tournament-place">—</span>
+                                </div>
+                                <div class="tournament-item">
+                                    <span class="tournament-name">Кубок кланов</span>
+                                    <span class="tournament-place">—</span>
+                                </div>
+                                <div class="tournament-item">
+                                    <span class="tournament-name">Турнир мастеров</span>
+                                    <span class="tournament-place">—</span>
+                                </div>
+                                <div class="tournament-item">
+                                    <span class="tournament-name">Лига чемпионов</span>
+                                    <span class="tournament-place">—</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stats-clan-full">
+                            <div class="clan-full-title">🏛️ Клан</div>
+                            <div class="clan-full-info">
+                                <div class="clan-full-item">
+                                    <span class="clan-full-label">Название</span>
+                                    <span class="clan-full-value">[LYPSO] Calypso clan</span>
+                                </div>
+                                <div class="clan-full-item">
+                                    <span class="clan-full-label">Участники</span>
+                                    <span class="clan-full-value">50 / 50</span>
+                                </div>
+                                <div class="clan-full-item">
+                                    <span class="clan-full-label">Уровень снабжения</span>
+                                    <span class="clan-full-value">X</span>
+                                </div>
+                                <div class="clan-full-item">
+                                    <span class="clan-full-label">Клановая лига</span>
+                                    <span class="clan-full-value">🏆 Золотая</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn-logout-full" id="logoutBtnFull">🚪 Выйти из аккаунта</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== ЧАТ (ПОЛНЫЙ ЭКРАН) ===== -->
+            <div class="chat-fullscreen" id="chatFullscreen">
+                <div class="chat-fullscreen-content">
+                    <div class="chat-fullscreen-header">
+                        <button class="chat-back-btn" id="chatBackBtn">← Назад</button>
+                        <span class="chat-fullscreen-title">💬 Общение</span>
+                    </div>
+                    <div class="chat-fullscreen-body" id="chatFullscreenBody">
+                        <!-- Вкладки чата -->
+                        <div class="chat-tabs">
+                            <button class="chat-tab active" data-tab="clan">🏛️ Клановый чат</button>
+                            <button class="chat-tab" data-tab="global">🌍 Общий чат</button>
+                        </div>
+                        
+                        <!-- Клановый чат -->
+                        <div class="chat-clan-section chat-section active" id="clanChatSection">
+                            <div class="chat-clan-header">
+                                <span class="chat-clan-title">🏛️ КЛАНОВЫЙ ЧАТ</span>
+                                <span class="chat-clan-online">1 онлайн</span>
+                            </div>
+                            <div class="chat-clan-messages" id="clanMessages">
+                                <div class="chat-welcome-clan">Добро пожаловать в клановый чат! 🎉</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Общий чат -->
+                        <div class="chat-global-section chat-section" id="globalChatSection">
+                            <div class="chat-global-header">
+                                <span class="chat-global-title">🌍 ОБЩИЙ ЧАТ</span>
+                                <span class="chat-global-online">Все игроки</span>
+                            </div>
+                            <div class="chat-global-messages" id="globalMessages">
+                                <div class="chat-welcome-global">Добро пожаловать в общий чат! 🎉</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Друзья -->
+                        <div class="chat-friends-section">
+                            <div class="chat-friends-header">
+                                <span class="chat-friends-title">👥 ДРУЗЬЯ</span>
+                                <span class="chat-friends-count" id="friendsCount">0</span>
+                            </div>
+                            <div class="chat-friends-list" id="friendsFullList">
+                                <div style="color:#556;font-size:12px;text-align:center;padding:10px 0;">У вас пока нет друзей</div>
+                            </div>
+                            <div class="chat-friends-search">
+                                <input type="text" id="friendSearchInput" placeholder="ВВЕДИ НИК ИГРОКА">
+                                <button id="friendSearchBtn">🔍</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Ввод сообщения -->
+                        <div class="chat-input-full">
+                            <input type="text" id="chatFullInput" placeholder="ВВЕДИ ТЕКСТ СООБЩЕНИЯ">
+                            <button id="chatFullSendBtn">▶</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== НАСТРОЙКИ ===== -->
+            <div class="settings-panel" id="settingsPanel">
+                <div class="settings-content">
+                    <div class="settings-header">
+                        <span class="settings-title">⚙️ Настройки</span>
+                        <span class="settings-close" id="settingsCloseBtn">✕</span>
+                    </div>
+                    <div class="settings-body">
+                        <div class="setting-item">
+                            <span class="setting-label">📧 Электронная почта</span>
+                            <span class="setting-value" id="settingsEmail">example@mail.com</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">🔑 Изменить пароль</span>
+                            <button class="setting-btn" id="changePasswordBtn">Отправить код на почту</button>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">📦 Версия игры</span>
+                            <span class="setting-value">26.8.0</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">🔄 Последнее обновление</span>
+                            <span class="setting-value" id="settingsLastUpdate">05.09.2026</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">⏰ Последний заход</span>
+                            <span class="setting-value" id="settingsLastLogin">—</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">🎁 Промо-код</span>
+                            <div class="promo-input-group">
+                                <input type="text" id="promoInput" placeholder="Введите промо-код">
+                                <button class="setting-btn" id="activatePromoBtn">Активировать</button>
+                            </div>
+                            <span id="promoResult" style="font-size:12px;margin-top:4px;color:#8899bb;"></span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">🎮 Качество графики</span>
+                            <select id="graphicsSelect" class="setting-select">
+                                <option value="low">Низкая</option>
+                                <option value="medium" selected>Средняя</option>
+                                <option value="high">Высокая</option>
+                                <option value="ultra">Ультра</option>
+                                <option value="ultra_extended">🌟 Ультра расширенное</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">⚡ Максимальный FPS</span>
+                            <select id="fpsLimitSelect" class="setting-select">
+                                <option value="30">30 FPS</option>
+                                <option value="60" selected>60 FPS</option>
+                                <option value="90">90 FPS</option>
+                                <option value="120">120 FPS</option>
+                                <option value="144">144 FPS</option>
+                                <option value="0">Без ограничений</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">🌤️ Смена погоды</span>
+                            <select id="weatherSelect" class="setting-select">
+                                <option value="day">☀️ Ясно</option>
+                                <option value="evening">🌅 Вечер</option>
+                                <option value="night">🌙 Ночь</option>
+                                <option value="snow">❄️ Снег</option>
+                                <option value="rain">🌧️ Дождь</option>
+                                <option value="cycle">🔄 Циклическая смена</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">📱 Разрешение экрана</span>
+                            <select id="resolutionSelect" class="setting-select">
+                                <option value="auto">Авто</option>
+                                <option value="640x480">640x480</option>
+                                <option value="800x600">800x600</option>
+                                <option value="1024x768">1024x768</option>
+                                <option value="1280x720">1280x720 (HD)</option>
+                                <option value="1920x1080">1920x1080 (Full HD)</option>
+                                <option value="2560x1440">2560x1440 (2K)</option>
+                                <option value="3840x2160">3840x2160 (4K)</option>
+                            </select>
+                            <button class="setting-btn" id="applyResolutionBtn">Применить</button>
+                        </div>
+                        <button class="setting-btn" id="applySettingsBtn" style="width:100%;text-align:center;justify-content:center;margin-top:8px;">✅ Применить все настройки</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== НОВОСТИ ===== -->
+            <div class="news-panel" id="newsPanel">
+                <div class="news-content">
+                    <div class="news-header">
+                        <span class="news-title">📰 Новости</span>
+                        <span class="news-close" id="newsCloseBtn">✕</span>
+                    </div>
+                    <div class="news-body" id="newsBody">
+                        <div class="news-item" onclick="showNewsDetail('Добро пожаловать в Tanks Blitz Online!', 'Сегодня')">
+                            <div class="news-date">Сегодня</div>
+                            <div class="news-text">Добро пожаловать в Tanks Blitz Online!</div>
+                            <div class="news-read-more">Подробнее →</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== ГАЛЕРЕЯ ФОНОВ ===== -->
+            <div class="wallpapers-gallery" id="wallpapersGallery">
+                <div class="gallery-header">
+                    <span class="gallery-title">🖼️ Фон для статистики</span>
+                    <span class="gallery-close" id="galleryCloseBtn">✕</span>
+                </div>
+                <div class="gallery-grid">
+                    <div class="wallpaper-item" data-bg="default"><div class="wallpaper-preview" style="background:linear-gradient(135deg,#0a0a2e,#1a1a4e);"><span>🌌</span></div><span class="wallpaper-name">Космос</span></div>
+                    <div class="wallpaper-item" data-bg="anime1"><div class="wallpaper-preview" style="background:linear-gradient(135deg,#ff6b6b,#ffd93d);"><span>🎌</span></div><span class="wallpaper-name">Аниме #1</span></div>
+                    <div class="wallpaper-item" data-bg="anime2"><div class="wallpaper-preview" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe);"><span>🎌</span></div><span class="wallpaper-name">Аниме #2</span></div>
+                    <div class="wallpaper-item" data-bg="tank1"><div class="wallpaper-preview" style="background:linear-gradient(135deg,#2d3436,#636e72);"><span>🎯</span></div><span class="wallpaper-name">Танк #1</span></div>
+                    <div class="wallpaper-item" data-bg="tank2"><div class="wallpaper-preview" style="background:linear-gradient(135deg,#e17055,#d63031);"><span>🎯</span></div><span class="wallpaper-name">Танк #2</span></div>
+                    <div class="wallpaper-item" data-bg="night"><div class="wallpaper-preview" style="background:linear-gradient(135deg,#0a0a1a,#1a0a2a);"><span>🌙</span></div><span class="wallpaper-name">Ночь</span></div>
+                    <div class="wallpaper-item" data-bg="cyber"><div class="wallpaper-preview" style="background:linear-gradient(135deg,#0a0a2a,#ff00ff33);"><span>💜</span></div><span class="wallpaper-name">Киберпанк</span></div>
+                    <div class="wallpaper-item" data-bg="sunset"><div class="wallpaper-preview" style="background:linear-gradient(135deg,#ff6b35,#ffd93d);"><span>🌅</span></div><span class="wallpaper-name">Закат</span></div>
+                    <div class="wallpaper-item" data-bg="ocean"><div class="wallpaper-preview" style="background:linear-gradient(135deg,#006994,#00b4d8);"><span>🌊</span></div><span class="wallpaper-name">Океан</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== МОДАЛЬНОЕ ОКНО ДЛЯ НОВОСТЕЙ ===== -->
+    <div id="newsDetailModal" style="display:none;">
+        <div class="news-detail-content">
+            <div class="news-detail-header">
+                <span class="news-detail-title">📰 Подробнее</span>
+                <button class="news-detail-close" id="newsDetailClose">✕</button>
+            </div>
+            <div class="news-detail-body">
+                <div class="news-detail-date" id="newsDetailDate">Сегодня</div>
+                <div class="news-detail-text" id="newsDetailText">Текст новости</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== МОДАЛЬНОЕ ОКНО БОЯ ===== -->
+    <div id="modal">
+        <h2>ПОИСК БОЯ</h2>
+        <p>Загрузка карты "Минск"...</p>
+        <button id="modalCloseBtn">ОТМЕНА</button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
