@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Tanks Blitz</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <!-- ===== ЭКРАН ЗАГРУЗКИ ===== -->
+    <div id="loadingScreen">
+        <div id="loadingBg">
+            <img src="anime-girl-tank.jpg" alt="Anime" class="bg-image" id="loadingImg">
+            <div class="loading-overlay">
+                <div class="loading-container">
+                    <div class="loading-logo">🎮</div>
+                    <div class="loading-title">TANKS BLITZ</div>
+                    <div class="loading-subtitle">Синхронизация данных...</div>
+                    <div class="loading-bar">
+                        <div class="loading-progress" id="loadingProgress"></div>
+                    </div>
+                    <div class="loading-version">26.8.0</div>
+                    <div class="loading-tanks">Загрузка танков...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ЭКРАН ВХОДА ===== -->
+    <div id="loginScreen" style="display:none;">
+        <div id="loginBg">
+            <img src="anime-girl-tank.jpg" alt="Anime" class="bg-image" id="loginImg">
+            <div class="login-overlay">
+                <div class="login-container">
+                    <div class="login-header">
+                        <div class="login-logo">🎮</div>
+                        <div class="login-title">TANKS BLITZ</div>
+                        <div class="login-subtitle">ВОЙДИ В ИГРУ</div>
+                    </div>
+                    <div id="loginError" class="error-message" style="display:none;"></div>
+                    <div class="login-divider">ИЛИ</div>
+                    <div class="login-form">
+                        <div class="input-group">
+                            <label>Электронная почта</label>
+                            <input type="email" id="loginEmail" placeholder="example@mail.com">
+                        </div>
+                        <div class="input-group">
+                            <label>Пароль</label>
+                            <input type="password" id="loginPassword" placeholder="••••••••">
+                        </div>
+                        <button class="btn-login" id="loginBtn">ВОЙТИ</button>
+                    </div>
+                    <div class="login-links">
+                        <a href="#" class="forgot-password" id="forgotBtn">НЕ МОГУ ВОЙТИ</a>
+                        <a href="#" class="register-link" id="registerBtn">СОЗДАТЬ АККАУНТ</a>
+                    </div>
+                    <div class="login-footer">
+                        <span class="version">26.8.0</span>
+                        <span class="last-login" id="lastLoginDisplay">Последний вход: —</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ЭКРАН РЕГИСТРАЦИИ ===== -->
+    <div id="registerScreen" style="display:none;">
+        <div id="registerBg">
+            <img src="anime-girl-tank.jpg" alt="Anime" class="bg-image" id="registerImg">
+            <div class="login-overlay">
+                <div class="login-container register-container">
+                    <div class="login-header">
+                        <div class="login-logo">🎮</div>
+                        <div class="login-title">TANKS BLITZ</div>
+                        <div class="login-subtitle">СОЗДАНИЕ АККАУНТА</div>
+                    </div>
+                    <div id="registerError" class="error-message" style="display:none;"></div>
+                    <div class="login-form">
+                        <div class="input-group">
+                            <label>Игровой ник</label>
+                            <input type="text" id="registerName" placeholder="Введите ваш ник">
+                        </div>
+                        <div class="input-group">
+                            <label>Электронная почта</label>
+                            <input type="email" id="registerEmail" placeholder="example@mail.com">
+                        </div>
+                        <div class="input-group">
+                            <label>Пароль</label>
+                            <input type="password" id="registerPassword" placeholder="Минимум 6 символов">
+                        </div>
+                        <div class="input-group">
+                            <label>Подтверждение пароля</label>
+                            <input type="password" id="registerPasswordConfirm" placeholder="Повторите пароль">
+                        </div>
+                        <button class="btn-login" id="registerBtn2">СОЗДАТЬ АККАУНТ</button>
+                        <button class="btn-back" id="backToLoginBtn">◀ НАЗАД К ВХОДУ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ИГРОВОЙ ИНТЕРФЕЙС ===== -->
+    <div id="gameInterface" style="display:none;">
+        <div id="game-container"></div>
+        <div id="ui-layer">
+            <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+            <div class="top-bar">
+                <div class="player-info" id="statsToggleBtn">
+                    <div class="avatar">⚡</div>
+                    <div class="player-text">
+                        <span class="p-name" id="gamePlayerName">Игрок</span>
+                        <span class="p-clan">[LYPSO]</span>
+                    </div>
+                </div>
+                <div class="res-bar">
+                    <span>🪙 142</span>
+                    <span>⚙️ 7 316 844</span>
+                    <span>⭐ 86 318</span>
+                    <button id="musicToggleBtnTop" class="music-btn-top">🔊</button>
+                </div>
+            </div>
+
+            <!-- КНОПКА В БОЙ -->
+            <div class="battle-section">
+                <button class="btn-battle" id="battleBtn">В БОЙ!</button>
+                <div class="battle-sub">Новый бой • Сменить режим</div>
+            </div>
+
+            <!-- ЛЕВАЯ ПАНЕЛЬ -->
+            <div class="left-panel">
+                <button class="left-btn" id="storageBtn" data-page="storage">📦 Хранилище</button>
+                <button class="left-btn" id="chatMenuBtn" data-page="chat">💬 Чат <span class="b-red" id="chatBadge">27</span></button>
+                <button class="left-btn" id="settingsMenuBtn" data-page="settings">⚙️ Настройки</button>
+                <button class="left-btn" id="newsBtn" data-page="news">📰 Новости</button>
+            </div>
+
+            <!-- ПРАВАЯ ПАНЕЛЬ -->
+            <div class="right-panel">
+                <div class="promo-box">
+                    <div class="p-title">Розыгрыш «Раскаленный...»</div>
+                    <div class="p-time">⏱️ 6д 9ч</div>
+                </div>
+                <button class="ad-btn">▶ Золото за рекламу</button>
+            </div>
+
+            <!-- FPS ВНИЗУ СЛЕВА -->
+            <div class="fps-bottom-left" id="fpsDisplay">
+                <span class="fps-value" id="fpsValue">0</span>
+                <span class="fps-label">FPS</span>
+            </div>
+
+            <!-- КАРУСЕЛЬ ТАНКОВ -->
+            <div class="carousel">
+                <div class="t-card active">
+                    <span class="t-lvl">X</span>
+                    <div class="t-icon">🟫</div>
+                    <div class="t-name">Minotauro</div>
+                </div>
+                <div class="t-card">
+                    <span class="t-lvl">X</span>
+                    <div class="t-icon">🔶</div>
+                    <div class="t-name">FV205b</div>
+                </div>
+                <div class="t-card">
+                    <span class="t-lvl">X</span>
+                    <div class="t-icon">🔷</div>
+                    <div class="t-name">Ho-Ri</div>
+                </div>
+                <div class="t-card">
+                    <span class="t-lvl">X</span>
+                    <div class="t-icon">🟨</div>
+                    <div class="t-name">Wz.70</div>
+                </div>
+            </div>
+
+            <!-- ===== СТАТИСТИКА (ПОЛНЫЙ ЭКРАН КАК В ОРИГИНАЛЕ) ===== -->
+            <div class="stats-fullscreen" id="statsFullscreen">
+                <div class="stats-fullscreen-content">
+                    <div class="stats-fullscreen-header">
+                        <button class="stats-back-btn" id="statsBackBtn">← Назад</button>
+                        <span class="stats-fullscreen-title">Статистика</span>
+                        <button class="stats-close-btn" id="statsFullscreenClose">✕</button>
+                    </div>
+                    <div class="stats-fullscreen-body">
+                        <!-- Профиль -->
+                        <div class="stats-profile">
+                            <div class="stats-profile-avatar">🏆</div>
+                            <div class="stats-profile-info">
+                                <span class="stats-profile-name" id="statsFullName">Игрок</span>
+                                <span class="stats-profile-clan" id="statsFullClan">[LYPSO] Calypso clan</span>
+                                <span class="stats-profile-league">🏅 Золотая лига</span>
+                            </div>
+                        </div>
+                        <!-- Статистика -->
+                        <div class="stats-full-grid">
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullBattles">0</span>
+                                <span class="stats-full-label">Бои</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullWins">0</span>
+                                <span class="stats-full-label">Победы</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullWinrate">0%</span>
+                                <span class="stats-full-label">Винрейт</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullAvgDamage">0</span>
+                                <span class="stats-full-label">Средний урон</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullMastery">0</span>
+                                <span class="stats-full-label">«Мастер»</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullRating">0</span>
+                                <span class="stats-full-label">Рейтинг</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullDestroyed">0</span>
+                                <span class="stats-full-label">Уничтожено</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullSurvival">0%</span>
+                                <span class="stats-full-label">Выживаемость</span>
+                            </div>
+                            <div class="stats-full-item">
+                                <span class="stats-full-value" id="statFullAccuracy">0%</span>
+                                <span class="stats-full-label">Точность</span>
+                            </div>
+                        </div>
+                        <!-- История турниров -->
+                        <div class="stats-tournaments">
+                            <div class="tournaments-title">📊 История турниров</div>
+                            <div class="tournaments-grid">
+                                <div class="tournament-item">
+                                    <span class="tournament-name">Золотая лига</span>
+                                    <span class="tournament-place">—</span>
+                                </div>
+                                <div class="tournament-item">
+                                    <span class="tournament-name">Кубок кланов</span>
+                                    <span class="tournament-place">—</span>
+                                </div>
+                                <div class="tournament-item">
+                                    <span class="tournament-name">Турнир мастеров</span>
+                                    <span class="tournament-place">—</span>
+                                </div>
+                                <div class="tournament-item">
+                                    <span class="tournament-name">Лига чемпионов</span>
+                                    <span class="tournament-place">—</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Клан -->
+                        <div class="stats-clan-full">
+                            <div class="clan-full-title">🏛️ Клан</div>
+                            <div class="clan-full-info">
+                                <div class="clan-full-item">
+                                    <span class="clan-full-label">Название</span>
+                                    <span class="clan-full-value">[LYPSO] Calypso clan</span>
+                                </div>
+                                <div class="clan-full-item">
+                                    <span class="clan-full-label">Участники</span>
+                                    <span class="clan-full-value">50 / 50</span>
+                                </div>
+                                <div class="clan-full-item">
+                                    <span class="clan-full-label">Уровень снабжения</span>
+                                    <span class="clan-full-value">X</span>
+                                </div>
+                                <div class="clan-full-item">
+                                    <span class="clan-full-label">Клановая лига</span>
+                                    <span class="clan-full-value">🏆 Золотая</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn-logout-full" id="logoutBtnFull">🚪 Выйти из аккаунта</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== ЧАТ (ПОЛНЫЙ ЭКРАН КАК В ОРИГИНАЛЕ) ===== -->
+            <div class="chat-fullscreen" id="chatFullscreen">
+                <div class="chat-fullscreen-content">
+                    <div class="chat-fullscreen-header">
+                        <button class="chat-back-btn" id="chatBackBtn">← Назад</button>
+                        <span class="chat-fullscreen-title">💬 Общение</span>
+                        <button class="chat-close-btn" id="chatFullscreenClose">✕</button>
+                    </div>
+                    <div class="chat-fullscreen-body">
+                        <!-- Клановый чат -->
+                        <div class="chat-clan-section">
+                            <div class="chat-clan-header">
+                                <span class="chat-clan-title">🏛️ КЛАНОВЫЙ ЧАТ</span>
+                                <span class="chat-clan-online">1 онлайн</span>
+                            </div>
+                            <div class="chat-clan-messages" id="clanMessages">
+                                <div class="clan-message">
+                                    <span class="clan-msg-name">dark111_20...</span>
+                                    <span class="clan-msg-text">на чем угодно</span>
+                                </div>
+                                <div class="clan-message">
+                                    <span class="clan-msg-name">NaGibaTor_...</span>
+                                    <span class="clan-msg-text">На чем</span>
+                                </div>
+                                <div class="clan-message">
+                                    <span class="clan-msg-name">dark111_20...</span>
+                                    <span class="clan-msg-text">кто взвод через 10 мин?</span>
+                                </div>
+                                <div class="clan-message-date">03.09.2026, четверг</div>
+                                <div class="clan-message">
+                                    <span class="clan-msg-name">NaGibaTor_...</span>
+                                    <span class="clan-msg-text">Урон надо 65к</span>
+                                </div>
+                                <div class="clan-message">
+                                    <span class="clan-msg-name">NaGibaTor_...</span>
+                                    <span class="clan-msg-text">Кто возвод</span>
+                                </div>
+                                <div class="clan-message">
+                                    <span class="clan-msg-name">mercySAW_X</span>
+                                    <span class="clan-msg-text">ЛУЛ ТЫ ДЭЭЭЭ</span>
+                                </div>
+                                <div class="clan-message">
+                                    <span class="clan-msg-name">tw1xzz1ace...</span>
+                                    <span class="clan-msg-text">***** я на пт 8 уровня всех *****</span>
+                                </div>
+                                <div class="clan-message">
+                                    <span class="clan-msg-name">dark111_20...</span>
+                                    <span class="clan-msg-text">Давай</span>
+                                </div>
+                                <div class="clan-message">
+                                    <span class="clan-msg-name">tw1xzz1ace...</span>
+                                    <span class="clan-msg-text">Ща я доиграю турик и поедем кбз выполнять</span>
+                                </div>
+                                <div class="clan-message">
+                                    <span class="clan-msg-name">dark111_20...</span>
+                                    <span class="clan-msg-text">кто звода</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Друзья -->
+                        <div class="chat-friends-section">
+                            <div class="chat-friends-header">
+                                <span class="chat-friends-title">👥 ДРУЗЬЯ</span>
+                                <span class="chat-friends-count">4</span>
+                            </div>
+                            <div class="chat-friends-list">
+                                <div class="friend-item">
+                                    <span class="friend-name">Blackjack716</span>
+                                    <span class="friend-clan">[ASK16]</span>
+                                    <span class="friend-status online">1</span>
+                                </div>
+                                <div class="friend-item">
+                                    <span class="friend-name">KOTUK_B_T34</span>
+                                    <span class="friend-status online">1</span>
+                                </div>
+                                <div class="friend-item">
+                                    <span class="friend-name">Swyatoy_na_kuliche</span>
+                                    <span class="friend-clan">[GULY-]</span>
+                                    <span class="friend-status online">1</span>
+                                </div>
+                                <div class="friend-item">
+                                    <span class="friend-name">Tortik2qi</span>
+                                    <span class="friend-clan">[IPVIP]</span>
+                                    <span class="friend-status online">1</span>
+                                </div>
+                            </div>
+                            <div class="chat-friends-search">
+                                <input type="text" id="friendSearchInput" placeholder="ВВЕДИ НИК ИГРОКА">
+                                <button id="friendSearchBtn">🔍</button>
+                            </div>
+                        </div>
+                        <!-- Ввод сообщения -->
+                        <div class="chat-input-full">
+                            <input type="text" id="chatFullInput" placeholder="ВВЕДИ ТЕКСТ СООБЩЕНИЯ">
+                            <button id="chatFullSendBtn">▶</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== МОДАЛЬНОЕ ОКНО ===== -->
+    <div id="modal">
+        <h2>ПОИСК БОЯ</h2>
+        <p>Загрузка карты "Минск"...</p>
+        <button id="modalCloseBtn">ОТМЕНА</button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
